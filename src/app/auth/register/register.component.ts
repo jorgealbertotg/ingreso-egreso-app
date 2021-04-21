@@ -1,8 +1,12 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
+import { Store } from '@ngrx/store';
 import Swal from 'sweetalert2';
 import { AuthService } from '../../services/auth.service';
+import { AppState } from '../../app.reducer';
+import { Subscription } from 'rxjs';
+import { isLoading, stopLoading } from '../../shared/ui.actions';
 
 @Component({
   selector: 'app-register',
@@ -10,11 +14,15 @@ import { AuthService } from '../../services/auth.service';
   styles: [
   ]
 })
-export class RegisterComponent implements OnInit {
+export class RegisterComponent implements OnInit, OnDestroy {
 
   registroForm: FormGroup;
+  cargando: boolean;
+  uiSubscription: Subscription;
 
-  constructor(private fb: FormBuilder, private authService: AuthService, private router: Router) { }
+  constructor(private fb: FormBuilder, private authService: AuthService, private router: Router, private store: Store<AppState>) {
+    this.cargando = false;
+  }
 
   ngOnInit(): void {
     this.registroForm = this.fb.group({
@@ -22,6 +30,14 @@ export class RegisterComponent implements OnInit {
       correo: ['', [Validators.required, Validators.email]],
       password: ['', Validators.required]
     });
+
+    this.uiSubscription = this.store.select('ui').subscribe(ui => {
+      this.cargando = ui.isLoading;
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.uiSubscription.unsubscribe();
   }
 
   crearUsuario() {
@@ -29,19 +45,22 @@ export class RegisterComponent implements OnInit {
       return;
     }
 
-    Swal.fire({
-      title: 'Espere por favor',
-      showConfirmButton: false,
-      willOpen: () => {
-        Swal.showLoading();
-      }
-    });
+    this.store.dispatch(isLoading());
+
+    // Swal.fire({
+    //   title: 'Espere por favor',
+    //   showConfirmButton: false,
+    //   willOpen: () => {
+    //     Swal.showLoading();
+    //   }
+    // });
 
     const {nombre, correo, password} = this.registroForm.value;
     this.authService.crearUsuario(nombre, correo, password)
       .then(credenciales => {
         console.log(credenciales);
-        Swal.close();
+        // Swal.close();
+        this.store.dispatch(stopLoading());
         this.router.navigate(['/']);
       })
       .catch(error => {

@@ -17,7 +17,14 @@ export class SidebarComponent implements OnInit {
   }
 
   cerrarSesion() {
-    this.authService.cerrarSesion();
+    this.authService.cerrarSesion()
+      .then(respuesta => {
+        console.log(respuesta);
+        this.router.navigate(['/login']);
+      })
+      .catch(error => {
+        console.error(error)
+      });
   }
 
 }
